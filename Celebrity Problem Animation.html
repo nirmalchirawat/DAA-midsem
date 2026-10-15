@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Celebrity Problem, animated</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap">
+<style>
+:root{--bg:#ece8f4;--surf:#f8f6fc;--ink:#1f1b3d;--mute:#6b6788;--gold:#e0a106;--yes:#2f7d5b;--no:#c23b4e;--line:#cfc8e2;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1a2e;--surf:#262340;--ink:#efeaff;--mute:#a49fc4;--gold:#f2b929;--yes:#5fd0a0;--no:#ff7a8c;--line:#3d3963}}
+:root[data-theme="dark"]{--bg:#1c1a2e;--surf:#262340;--ink:#efeaff;--mute:#a49fc4;--gold:#f2b929;--yes:#5fd0a0;--no:#ff7a8c;--line:#3d3963}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Bricolage Grotesque',system-ui,-apple-system,Segoe UI,sans-serif}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+main{max-width:1040px;margin:0 auto;padding:20px 16px 32px}
+h1{font-size:clamp(26px,5vw,40px);font-weight:800;letter-spacing:-.02em;margin:0 0 6px}
+.sub{color:var(--mute);margin:0 0 18px;max-width:62ch;line-height:1.5}
+.grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.stage{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:6px}
+svg{display:block;width:100%;height:auto}
+.panel{display:flex;flex-direction:column;gap:12px}
+.box{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:14px}
+#msg{font-size:18px;line-height:1.4;min-height:5.6em;font-weight:600}
+#log{margin:0;padding-left:20px;max-height:220px;overflow-y:auto;font-size:14px;line-height:1.5;color:var(--mute)}
+#log li.now{color:var(--ink);font-weight:600}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,select{font:inherit;font-size:14px;padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surf);color:var(--ink);cursor:pointer}
+button.main{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+button:focus-visible,select:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.key{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--mute)}
+.key i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.node circle{fill:var(--bg);stroke:var(--ink);stroke-width:2;transition:all .4s}
+.node text.l{font-size:22px;font-weight:800;text-anchor:middle;dominant-baseline:central;fill:var(--ink);transition:fill .4s}
+.node text.t{font-size:12px;text-anchor:middle;fill:var(--mute)}
+.node text.s{font-size:22px;text-anchor:middle;fill:var(--gold);opacity:0;transition:opacity .4s}
+.node{transition:opacity .4s}
+.node.out{opacity:.3}
+.node.out circle{stroke-dasharray:4 4}
+.node.cand circle{stroke:var(--gold);stroke-width:5}
+.node.chk circle{stroke:var(--yes);stroke-width:4}
+.node.celeb circle{fill:var(--gold);stroke:var(--gold);stroke-width:5}
+.node.celeb text.l{fill:#1f1b3d}
+.node.celeb text.s{opacity:1}
+.arr path{fill:none;stroke-width:3.5;stroke-linecap:round}
+.arr.yes path{stroke:var(--yes);stroke-dasharray:var(--len);animation:draw .6s ease-out forwards}
+.arr.no path{stroke:var(--no);stroke-dasharray:7 7;animation:fade .5s ease-out both}
+.arr text{font-size:13px;font-weight:800;text-anchor:middle;paint-order:stroke;stroke:var(--surf);stroke-width:5px;animation:fade .5s .3s ease-out both}
+.arr.yes text{fill:var(--yes)}.arr.no text{fill:var(--no)}
+@keyframes draw{from{stroke-dashoffset:var(--len)}to{stroke-dashoffset:0}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.arr path,.arr text{animation:none}.node,.node circle{transition:none}}
+</style></head>
+<body><main>
+<h1>The celebrity problem</h1>
+<p class="sub">At a party, one person is known by everyone and knows nobody. You may only ask “does X know Y?”. Watch how every question eliminates one person, so the celebrity is found in O(n) questions instead of n².</p>
+<div class="grid">
+<div class="stage"><svg viewBox="0 0 600 540" role="img" aria-label="Party of seven people in a circle with arrows showing who knows whom">
+<defs>
+<marker id="my" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--yes)"/></marker>
+<marker id="mn" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--no)"/></marker>
+</defs>
+<g id="arrows"></g><g id="nodes"></g></svg></div>
+<div class="panel">
+<div class="box"><div id="msg" aria-live="polite"></div></div>
+<div class="ctl">
+<button class="main" id="play">Play</button><button id="step">Step</button><button id="reset">Restart</button><button id="newp">New party</button>
+<select id="spd" aria-label="Speed"><option value="1800">Slow</option><option value="1100" selected>Normal</option><option value="500">Fast</option></select>
+</div>
+<div class="key"><span><i style="background:var(--gold)"></i>candidate</span><span><i style="background:var(--yes)"></i>knows (yes)</span><span><i style="background:var(--no)"></i>doesn’t know (no)</span><span><i style="background:var(--line)"></i>eliminated</span></div>
+<div class="box"><ol id="log"></ol></div>
+</div></div>
+</main>
+<script>
+const N=7,L='ABCDEFG',$=s=>document.querySelector(s);
+const pos=[...Array(N)].map((_,i)=>{const a=-Math.PI/2+i*2*Math.PI/N;return[300+190*Math.cos(a),270+190*Math.sin(a)]});
+let knows,cel,steps,idx=-1,timer=null;
+
+function gen(){
+  cel=Math.floor(Math.random()*N);
+  knows=[...Array(N)].map((_,i)=>[...Array(N)].map((_,j)=>i===j?false:j===cel?true:i===cel?false:Math.random()<.5));
+  build();reset();
+}
+function build(){
+  steps=[];let st=Array(N).fill('in'),c=0;st[0]='cand';
+  steps.push({st:[...st],arrows:[],msg:`Everyone is a suspect. Start with ${L[0]} as the candidate.`});
+  for(let i=1;i<N;i++){
+    const k=knows[c][i];let m;
+    if(k){m=`${L[c]} knows ${L[i]}, so ${L[c]} can’t be the celebrity. ${L[i]} becomes the candidate.`;st[c]='out';st[i]='cand';
+      steps.push({st:[...st],arrows:[{a:c,b:i,y:true}],msg:m});c=i;continue}
+    m=`${L[c]} doesn’t know ${L[i]}, so ${L[i]} can’t be the celebrity (not everyone knows them). ${L[c]} stays.`;st[i]='out';
+    steps.push({st:[...st],arrows:[{a:c,b:i,y:false}],msg:m});
+  }
+  steps.push({st:[...st],arrows:[],msg:`Only ${L[c]} is left. Now verify: everyone must know ${L[c]}, and ${L[c]} must know nobody.`});
+  for(let j=0;j<N;j++){if(j===c)continue;
+    st[j]='chk';
+    steps.push({st:[...st],arrows:[{a:j,b:c,y:knows[j][c]},{a:c,b:j,y:knows[c][j]}],msg:`${L[j]} knows ${L[c]}: ${knows[j][c]?'yes':'no'}. ${L[c]} knows ${L[j]}: ${knows[c][j]?'yes':'no'}. ${L[j]} passes.`});
+  }
+  st[c]='celeb';
+  steps.push({st:[...st],arrows:[],msg:`${L[c]} is the celebrity. ${N-1} questions to find them, ${2*(N-1)} to prove it.`});
+}
+function arrow(a,b,y){
+  const [x1,y1]=pos[a],[x2,y2]=pos[b],dx=x2-x1,dy=y2-y1,d=Math.hypot(dx,dy),ux=dx/d,uy=dy/d;
+  const sx=x1+ux*34,sy=y1+uy*34,ex=x2-ux*40,ey=y2-uy*40,cx=(sx+ex)/2-uy*26,cy=(sy+ey)/2+ux*26;
+  const lx=.25*sx+.5*cx+.25*ex,ly=.25*sy+.5*cy+.25*ey;
+  return `<g class="arr ${y?'yes':'no'}"><path d="M${sx},${sy}Q${cx},${cy} ${ex},${ey}" marker-end="url(#${y?'my':'mn'})"/><text x="${lx}" y="${ly+4}">${y?'yes':'no'}</text></g>`;
+}
+function render(){
+  const s=idx<0?{st:Array(N).fill('in'),arrows:[],msg:'A new party. One person is the celebrity. Press Play or Step.'}:steps[idx];
+  $('#nodes').innerHTML=pos.map(([x,y],i)=>`<g class="node ${s.st[i]}"><circle cx="${x}" cy="${y}" r="30"/><text class="l" x="${x}" y="${y}">${L[i]}</text><text class="s" x="${x}" y="${y-38}">★</text><text class="t" x="${x}" y="${y+50}">${s.st[i]==='cand'?'candidate':s.st[i]==='out'?'ruled out':s.st[i]==='celeb'?'celebrity':''}</text></g>`).join('');
+  $('#arrows').innerHTML=s.arrows.map(r=>arrow(r.a,r.b,r.y)).join('');
+  document.querySelectorAll('.arr.yes path').forEach(p=>p.style.setProperty('--len',p.getTotalLength()));
+  $('#msg').textContent=s.msg;
+  $('#log').innerHTML=steps.slice(0,idx+1).map((t,i)=>`<li class="${i===idx?'now':''}">${t.msg}</li>`).join('');
+  const lg=$('#log');lg.scrollTop=lg.scrollHeight;
+  $('#play').textContent=timer?'Pause':(idx>=steps.length-1?'Replay':'Play');
+}
+function next(){if(idx<steps.length-1){idx++;render();return true}return false}
+function stop(){clearTimeout(timer);timer=null}
+function tick(){if(next()){timer=setTimeout(tick,+$('#spd').value)}else{timer=null;render()}}
+function reset(){stop();idx=-1;render()}
+$('#play').onclick=()=>{if(timer){stop();render();return}if(idx>=steps.length-1)idx=-1;timer=setTimeout(tick,0);render()};
+$('#step').onclick=()=>{stop();if(idx>=steps.length-1)idx=-1;next()};
+$('#reset').onclick=reset;
+$('#newp').onclick=gen;
+gen();
+</script></body></html>
